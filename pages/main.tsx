@@ -3,8 +3,12 @@ import { createRoot } from "react-dom/client";
 import Home from "../app/page";
 import "../app/globals.css";
 
-createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <Home />
-  </StrictMode>,
-);
+const rootElement = typeof document === "undefined" ? null : document.getElementById("root");
+
+if (rootElement) {
+  createRoot(rootElement).render(
+    <StrictMode>
+      <Home />
+    </StrictMode>,
+  );
+}
