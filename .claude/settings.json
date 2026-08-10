@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -n \"^\\\\.identity-story {\\\\|^/\\\\* Polaroid pockets\\\\|^\\\\.pocket {\\\\|^/\\\\* Small line\\\\|^\\\\.stage-veil\\\\|^/\\\\* Idle sway\" app/globals.css)",
+      "Bash(sort -k2 -t:)",
+      "Bash(npx tsc *)",
+      "Bash(echo \"--- tsc exit: $? ---\")"
+    ]
+  }
+}

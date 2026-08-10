@@ -70,28 +70,59 @@ const projects: Project[] = [
 ];
 
 const letters = [
-  { char: "A", x: "-32vw", y: "-20vh", r: "-18deg" },
-  { char: "N", x: "-20vw", y: "22vh", r: "12deg" },
-  { char: "T", x: "-9vw", y: "-28vh", r: "-8deg" },
-  { char: "A", x: "4vw", y: "25vh", r: "17deg" },
-  { char: "R", x: "14vw", y: "-25vh", r: "9deg" },
-  { char: "A", x: "25vw", y: "18vh", r: "-14deg" },
-  { char: "L", x: "34vw", y: "-15vh", r: "11deg" },
+  { char: "A", x: "-36vw", y: "-26vh", r: "-18deg" },
+  { char: "N", x: "-24vw", y: "28vh", r: "12deg" },
+  { char: "T", x: "-11vw", y: "-34vh", r: "-8deg" },
+  { char: "A", x: "5vw", y: "31vh", r: "17deg" },
+  { char: "R", x: "17vw", y: "-31vh", r: "9deg" },
+  { char: "A", x: "29vw", y: "23vh", r: "-14deg" },
+  { char: "L", x: "39vw", y: "-19vh", r: "11deg" },
 ];
+
+// Polaroid pockets: each is released from a letter's home position (ox/oy) and
+// settles at a scattered spot (x/y) around the centre line as the wordmark splits.
+// Ordered small-and-far to big-and-near, so the composition builds as you scroll.
+const pockets = [
+  { pick: 1, ox: "-11vw", oy: "-3vh", x: "-13vw", y: "-31vh", r: "7deg", w: "9.5vw", o: "0.7", float: "8.1s" },
+  { pick: 5, ox: "-33vw", oy: "2vh", x: "-38vw", y: "10vh", r: "-5deg", w: "8vw", o: "0.5", float: "11s" },
+  { pick: 3, ox: "33vw", oy: "3vh", x: "37vw", y: "26vh", r: "6deg", w: "8.5vw", o: "0.5", float: "9.4s" },
+  { pick: 1, ox: "22vw", oy: "-2vh", x: "33vw", y: "-14vh", r: "10deg", w: "9vw", o: "0.55", float: "10.2s" },
+  { pick: 5, ox: "11vw", oy: "3vh", x: "19vw", y: "20vh", r: "-6deg", w: "11vw", o: "0.9", float: "7.9s" },
+  { pick: 3, ox: "-22vw", oy: "3vh", x: "-25vw", y: "14vh", r: "9deg", w: "11.5vw", o: "0.95", float: "9.2s" },
+  { pick: 2, ox: "0vw", oy: "-2vh", x: "7vw", y: "-25vh", r: "4deg", w: "12.5vw", o: "1", float: "8.8s" },
+  { pick: 0, ox: "-33vw", oy: "-2vh", x: "-34vw", y: "-22vh", r: "-11deg", w: "13vw", o: "1", float: "7.5s" },
+  { pick: 4, ox: "0vw", oy: "2vh", x: "-7vw", y: "26vh", r: "-8deg", w: "13.5vw", o: "1", float: "10.4s" },
+];
+
+// The source URLs carry Unsplash's own resize params, so ask for the width each
+// slot actually paints instead of shipping the 2200px original into every slot.
+const srcFor = (image: string, width: number, quality = 74) =>
+  image.replace(/w=\d+&q=\d+/, `w=${width}&q=${quality}`);
+
+const srcSetFor = (image: string, widths: number[], quality = 74) =>
+  widths.map((width) => `${srcFor(image, width, quality)} ${width}w`).join(", ");
+
+const categories = ["All", "Residential", "Interiors", "Commercial"] as const;
 
 export default function Home() {
   const identityRef = useRef<HTMLElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
   const [activeProject, setActiveProject] = useState(0);
-  const [filter, setFilter] = useState("All");
+  const [filter, setFilter] = useState<string>("All");
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     const identity = identityRef.current;
     if (!identity) return;
     let frame = 0;
+    let ticking = false;
     const update = () => {
-      cancelAnimationFrame(frame);
+      // Guard rather than cancel-and-reschedule: Safari's momentum scroll can
+      // outpace rAF, and repeated cancelling would starve the callback.
+      if (ticking) return;
+      ticking = true;
       frame = requestAnimationFrame(() => {
+        ticking = false;
         const rect = identity.getBoundingClientRect();
         const distance = identity.offsetHeight - window.innerHeight;
         const progress = Math.min(1, Math.max(0, -rect.top / Math.max(1, distance)));
@@ -108,6 +139,23 @@ export default function Home() {
     };
   }, []);
 
+  // Dismiss the mobile menu on Escape or on any press outside the header.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMenuOpen(false);
+    };
+    const onPointerDown = (event: PointerEvent) => {
+      if (!headerRef.current?.contains(event.target as Node)) setMenuOpen(false);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("pointerdown", onPointerDown);
+    };
+  }, [menuOpen]);
+
   const visibleProjects = useMemo(
     () => (filter === "All" ? projects : projects.filter((project) => project.category === filter)),
     [filter],
@@ -121,138 +169,216 @@ export default function Home() {
   const next = projects[(activeProject + 1) % projects.length];
 
   return (
-    <main>
-      <header className="topbar">
+    <>
+      <a className="skip-link" href="#projects">Skip to projects</a>
+
+      <header className="topbar" ref={headerRef}>
         <a href="#top" className="compact-logo" aria-label="Antaral Studio home">
-          <span>ANTARAL</span><small>STUDIO</small>
+          <span>ANTARAL</span><small>Architecture / Studio</small>
         </a>
-        <nav className={menuOpen ? "nav-open" : ""} aria-label="Primary navigation">
+        <nav id="primary-nav" className={menuOpen ? "nav-open" : ""} aria-label="Primary">
           <a href="#projects" onClick={() => setMenuOpen(false)}>Projects</a>
           <a href="#studio" onClick={() => setMenuOpen(false)}>Studio</a>
           <a href="#contact" onClick={() => setMenuOpen(false)}>Contact</a>
         </nav>
-        <a className="inquiry-link" href="mailto:hello@antaralstudio.in?subject=Project%20enquiry">Discuss a site <span>↗</span></a>
-        <button className="menu-button" type="button" aria-label="Toggle navigation" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>
-          {menuOpen ? "Close" : "Menu"}
+        <a className="inquiry-link" href="mailto:hello@antaralstudio.in?subject=Project%20enquiry">Discuss a site <span aria-hidden="true">↗</span></a>
+        <button className="menu-button" type="button" aria-controls="primary-nav" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>
+          {menuOpen ? "Close" : "Menu"}<span className="sr-only"> navigation</span>
         </button>
       </header>
 
-      <section className="identity-story" id="top" ref={identityRef}>
-        <div className="identity-stage">
-          <p className="identity-label">Architecture + Interiors / Gujarat, India</p>
-          <div className="wordmark" aria-label="Antaral">
-            {letters.map((letter, index) => (
-              <span
-                className={`word-letter letter-${index + 1}`}
-                key={`${letter.char}-${index}`}
-                style={{ "--letter-x": letter.x, "--letter-y": letter.y, "--letter-r": letter.r } as CSSProperties}
-              >
-                {letter.char}
-              </span>
-            ))}
+      <main>
+        <section className="identity-story" id="top" ref={identityRef}>
+          {/* The wordmark below is a decorative treatment; this carries the name to
+              assistive tech and gives the document a descriptive top-level heading. */}
+          <h1 className="sr-only">
+            Antaral Studio — architecture and interior design by Ar. Monish Machhi, Gujarat, India
+          </h1>
+          <div className="identity-stage">
+            <div className="wordmark-system" aria-hidden="true">
+              <div className="wordmark-frame">
+                <div className="wordmark-meta wordmark-meta-top">
+                  <span>22.3072° N / 73.1812° E</span>
+                  <span>Identity</span>
+                </div>
+                <div className="wordmark">
+                  {letters.map((letter, index) => (
+                    <span
+                      className={`word-letter letter-${index + 1}`}
+                      key={`${letter.char}-${index}`}
+                      style={{ "--letter-x": letter.x, "--letter-y": letter.y, "--letter-r": letter.r } as CSSProperties}
+                    >
+                      <span className="letter-face letter-outline">{letter.char}</span>
+                      <span className="letter-face letter-upper">{letter.char}</span>
+                      <span className="letter-face letter-interval">{letter.char}</span>
+                      <span className="letter-face letter-lower">{letter.char}</span>
+                    </span>
+                  ))}
+                </div>
+                <div className="wordmark-meta wordmark-meta-bottom">
+                  <span>Antaral / The space between</span>
+                  <span>Architecture + Interiors / Gujarat, India</span>
+                </div>
+              </div>
+            </div>
+            <div className="stage-veil" aria-hidden="true" />
+            <div className="pocket-field" aria-hidden="true">
+              {pockets.map((pocket, index) => (
+                <div
+                  className="pocket"
+                  key={`pocket-${index}`}
+                  style={{
+                    "--i": String(index),
+                    "--ox": pocket.ox,
+                    "--oy": pocket.oy,
+                    "--x": pocket.x,
+                    "--y": pocket.y,
+                    "--r": pocket.r,
+                    "--w": pocket.w,
+                    "--o": pocket.o,
+                    "--float": pocket.float,
+                  } as CSSProperties}
+                >
+                  <div className="pocket-drift">
+                    <figure className="pocket-card">
+                      <img src={srcFor(projects[pocket.pick].image, 500, 72)} alt="" decoding="async" />
+                      <figcaption>{projects[pocket.pick].id} — {projects[pocket.pick].title}</figcaption>
+                    </figure>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="story-line" aria-hidden="true"><i /><span>Space shaped around life.</span><i /></p>
+            <div className="scroll-cue" aria-hidden="true"><span>Scroll to enter</span><i /></div>
           </div>
-          <div className="story-sentence" aria-hidden="true">
-            <span>Space</span><span>shaped</span><span>around life.</span>
+        </section>
+
+        <section className="featured" id="projects" aria-labelledby="featured-heading">
+          <div className="featured-head">
+            <p className="section-index">01 / Featured projects</p>
+            <h2 id="featured-heading">Places to live,<br />work and <em>belong.</em></h2>
+            <p>Our work begins with careful observation: of a site, a climate and the rhythms that make each client’s life their own.</p>
           </div>
-          <div className="story-columns">
-            <article><span>01 / Space</span><p>Clear, generous places rooted in climate and context.</p></article>
-            <article><span>02 / Between</span><p>The threshold where inside, outside, light and life meet.</p></article>
-            <article><span>03 / Life</span><p>Architecture that grows more meaningful through use.</p></article>
-          </div>
-          <div className="scroll-cue"><span>Scroll to enter</span><i /></div>
-        </div>
-      </section>
 
-      <section className="featured" id="projects">
-        <div className="featured-head">
-          <p className="section-index">01 / Featured projects</p>
-          <h1>Places to live,<br />work and <em>belong.</em></h1>
-          <p>Our work begins with careful observation: of a site, a climate and the rhythms that make each client’s life their own.</p>
-        </div>
-
-        <div className="carousel-shell">
-          <button className="image-button main-frame" type="button" onClick={() => selectProject(activeProject + 1)} aria-label="Show next featured project">
-            <img src={active.image} alt={`${active.title} — placeholder project photography`} />
-            <span className="frame-count">{String(activeProject + 1).padStart(2, "0")} / {String(projects.length).padStart(2, "0")}</span>
-            <span className="frame-open">Open project ↗</span>
-          </button>
-          <button className="image-button next-frame" type="button" onClick={() => selectProject(activeProject + 1)} aria-label={`Show ${next.title}`}>
-            <img src={next.image} alt="" />
-            <span>Next / {next.title}</span>
-          </button>
-        </div>
-
-        <div className="carousel-meta">
-          <div><span>{active.location}</span><h2>{active.title}</h2></div>
-          <dl><div><dt>Type</dt><dd>{active.category}</dd></div><div><dt>Year</dt><dd>{active.year}</dd></div><div><dt>Area</dt><dd>{active.area}</dd></div></dl>
-          <div className="carousel-arrows"><button type="button" onClick={() => selectProject(activeProject - 1)} aria-label="Previous project">←</button><button type="button" onClick={() => selectProject(activeProject + 1)} aria-label="Next project">→</button></div>
-        </div>
-
-        <div className="thumbnail-strip" aria-label="Select a featured project">
-          {projects.map((project, index) => (
-            <button type="button" className={activeProject === index ? "active" : ""} key={project.id} onClick={() => selectProject(index)} aria-label={`Show ${project.title}`} aria-pressed={activeProject === index}>
-              <img src={project.image} alt="" /><span>{String(index + 1).padStart(2, "0")}</span>
+          <div className="carousel-shell">
+            <button className="image-button main-frame" type="button" onClick={() => selectProject(activeProject + 1)} aria-label={`Show next project, ${next.title}`}>
+              <img
+                src={srcFor(active.image, 1600, 78)}
+                srcSet={srcSetFor(active.image, [800, 1200, 1600, 2000], 78)}
+                sizes="(max-width: 900px) 100vw, 76vw"
+                alt={active.title}
+                loading="lazy"
+                decoding="async"
+              />
+              <span className="frame-count">{String(activeProject + 1).padStart(2, "0")} / {String(projects.length).padStart(2, "0")}</span>
+              <span className="frame-open">Next project <span aria-hidden="true">↗</span></span>
             </button>
-          ))}
-        </div>
-      </section>
+            {/* Duplicates the main frame's action, so it is a decorative preview
+                for pointer users rather than a second stop for keyboard users. */}
+            <button className="image-button next-frame" type="button" tabIndex={-1} aria-hidden="true" onClick={() => selectProject(activeProject + 1)}>
+              <img
+                src={srcFor(next.image, 640)}
+                srcSet={srcSetFor(next.image, [400, 640, 900])}
+                sizes="24vw"
+                alt=""
+                loading="lazy"
+                decoding="async"
+              />
+              <span>Next / {next.title}</span>
+            </button>
+          </div>
 
-      <section className="project-field">
-        <div className="field-head">
-          <p className="section-index">02 / Project index</p>
-          <h2>Explore the work.</h2>
-          <div className="filters" aria-label="Filter projects">
-            {["All", "Residential", "Interiors", "Commercial"].map((category) => (
-              <button type="button" key={category} className={filter === category ? "active" : ""} onClick={() => setFilter(category)} aria-pressed={filter === category}>{category}</button>
+          <div className="carousel-meta">
+            <div><span>{active.location}</span><h3>{active.title}</h3></div>
+            <dl><div><dt>Type</dt><dd>{active.category}</dd></div><div><dt>Year</dt><dd>{active.year}</dd></div><div><dt>Area</dt><dd>{active.area}</dd></div></dl>
+            <div className="carousel-arrows"><button type="button" onClick={() => selectProject(activeProject - 1)} aria-label="Previous project"><span aria-hidden="true">←</span></button><button type="button" onClick={() => selectProject(activeProject + 1)} aria-label="Next project"><span aria-hidden="true">→</span></button></div>
+          </div>
+
+          <p className="sr-only" role="status">
+            Project {activeProject + 1} of {projects.length}: {active.title}. {active.category} in {active.location}, {active.year}, {active.area}.
+          </p>
+
+          <div className="thumbnail-strip" role="group" aria-label="Select a featured project">
+            {projects.map((project, index) => (
+              <button type="button" className={activeProject === index ? "active" : ""} key={project.id} onClick={() => selectProject(index)} aria-label={project.title} aria-pressed={activeProject === index}>
+                <img src={srcFor(project.image, 400)} alt="" loading="lazy" decoding="async" /><span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+              </button>
             ))}
           </div>
-        </div>
-        <div className="project-tiles">
-          {visibleProjects.map((project) => (
-            <article className="project-tile" key={project.id}>
-              <a href="#contact">
-                <div className="tile-image"><img src={project.image} alt={`${project.title} — placeholder project photography`} /><span>View ↗</span></div>
-                <div className="tile-copy"><span>{project.id}</span><h3>{project.title}</h3><p>{project.category} / {project.location}</p></div>
-              </a>
-            </article>
-          ))}
-        </div>
-      </section>
+        </section>
 
-      <section className="studio-intro" id="studio">
-        <p className="section-index">03 / The practice</p>
-        <div className="studio-statement">
-          <h2>Antaral is the meaningful interval between things.</h2>
-          <p>Led by Principal Architect Ar. Monish Machhi, the studio creates architecture and interiors through a close reading of place, material and everyday life. Each commission is developed personally—from the first conversation to the final detail.</p>
-        </div>
-        <div className="studio-facts">
-          <div><strong>18+</strong><span>Projects designed*</span></div>
-          <div><strong>1.2L</strong><span>Square feet shaped*</span></div>
-          <div><strong>03</strong><span>Project typologies*</span></div>
-          <p>* Placeholder figures ready for verified studio data.</p>
-        </div>
-        <div className="principal-row">
-          <div className="principal-photo" role="img" aria-label="Placeholder portrait for Ar. Monish Machhi" />
-          <div><p>Principal Architect</p><h3>Ar. Monish Machhi</h3></div>
-          <blockquote>“Good architecture is not an object placed on a site. It is a relationship—with climate, people and time.”</blockquote>
-        </div>
-      </section>
-
-      <section className="contact-section" id="contact">
-        <div className="contact-marquee" aria-hidden="true"><span>LET’S MAKE SPACE — LET’S MAKE SPACE — </span><span>LET’S MAKE SPACE — LET’S MAKE SPACE — </span></div>
-        <div className="contact-inner">
-          <p className="section-index">04 / Start a conversation</p>
-          <h2>Bring us a site.<br />Bring us a question.</h2>
-          <div className="contact-details">
-            <p>Tell us where you are, what you’re imagining and how far you’ve reached. We’ll begin there.</p>
-            <a href="mailto:hello@antaralstudio.in">hello@antaralstudio.in ↗</a>
-            <a href="tel:+910000000000">+91 00000 00000 ↗</a>
+        <section className="project-field" aria-labelledby="index-heading">
+          <div className="field-head">
+            <p className="section-index">02 / Project index</p>
+            <h2 id="index-heading">Explore the work.</h2>
+            <div className="filters" role="group" aria-label="Filter projects by type">
+              {categories.map((category) => (
+                <button type="button" key={category} className={filter === category ? "active" : ""} onClick={() => setFilter(category)} aria-pressed={filter === category}>{category}</button>
+              ))}
+            </div>
           </div>
-          <p className="placeholder-line">Contact details and all project information shown as placeholders.</p>
-        </div>
-      </section>
+          <p className="sr-only" role="status">
+            {visibleProjects.length} {visibleProjects.length === 1 ? "project" : "projects"} shown{filter === "All" ? "" : ` in ${filter}`}.
+          </p>
+          <div className="project-tiles">
+            {visibleProjects.map((project) => (
+              <article className="project-tile" key={project.id}>
+                <a href="#contact" aria-label={`Enquire about ${project.title}`}>
+                  <div className="tile-image">
+                    <img
+                      src={srcFor(project.image, 800)}
+                      srcSet={srcSetFor(project.image, [400, 600, 900])}
+                      sizes="(max-width: 560px) 100vw, (max-width: 900px) 50vw, 33vw"
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                    />
+                    <span aria-hidden="true">Enquire ↗</span>
+                  </div>
+                  <div className="tile-copy"><span>{project.id}</span><h3>{project.title}</h3><p>{project.category} / {project.location}</p></div>
+                </a>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="studio-intro" id="studio" aria-labelledby="studio-heading">
+          <p className="section-index">03 / The practice</p>
+          <div className="studio-statement">
+            <h2 id="studio-heading">Antaral is the meaningful interval between things.</h2>
+            <p>Led by Principal Architect Ar. Monish Machhi, the studio creates architecture and interiors through a close reading of place, material and everyday life. Each commission is developed personally—from the first conversation to the final detail.</p>
+          </div>
+          <div className="studio-facts">
+            <div><strong>18+</strong><span>Projects designed*</span></div>
+            <div><strong>1.2L</strong><span>Square feet shaped*</span></div>
+            <div><strong>03</strong><span>Project typologies*</span></div>
+            <p>* Placeholder figures ready for verified studio data.</p>
+          </div>
+          <div className="principal-row">
+            {/* Deliberately an empty plate until a real portrait exists — a stock
+                photo of another person must not stand in for a named architect. */}
+            <div className="principal-photo" aria-hidden="true" />
+            <div><p>Principal Architect</p><h3>Ar. Monish Machhi</h3></div>
+            <blockquote>“Good architecture is not an object placed on a site. It is a relationship—with climate, people and time.”</blockquote>
+          </div>
+        </section>
+
+        <section className="contact-section" id="contact" aria-labelledby="contact-heading">
+          <div className="contact-marquee" aria-hidden="true"><span>LET’S MAKE SPACE — LET’S MAKE SPACE — </span><span>LET’S MAKE SPACE — LET’S MAKE SPACE — </span></div>
+          <div className="contact-inner">
+            <p className="section-index">04 / Start a conversation</p>
+            <h2 id="contact-heading">Bring us a site.<br />Bring us a question.</h2>
+            <div className="contact-details">
+              <p>Tell us where you are, what you’re imagining and how far you’ve reached. We’ll begin there.</p>
+              <a href="mailto:hello@antaralstudio.in">hello@antaralstudio.in <span aria-hidden="true">↗</span></a>
+              <a href="tel:+910000000000">+91 00000 00000 <span aria-hidden="true">↗</span></a>
+            </div>
+            <p className="placeholder-line">Contact details and all project information shown as placeholders.</p>
+          </div>
+        </section>
+      </main>
 
       <footer><span>Antaral Studio</span><span>Architecture + Interiors / Gujarat</span><span>© {new Date().getFullYear()}</span></footer>
-    </main>
+    </>
   );
 }
