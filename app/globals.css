@@ -214,29 +214,34 @@ footer :focus-visible {
 }
 .hero-symbol-vector .hero-sail-path-2 { --sail-delay: 1.22s; }
 .hero-symbol-vector .hero-sail-path-3 { --sail-delay: 1.3s; }
+@property --tide-phase {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
 .hero-symbol-vector .hero-wave-idle {
   --tide-duration: 6s;
   --tide-delay: 0s;
-  --tide-x: 4px;
-  --tide-y: 1.2px;
-  --tide-scale: 1.012;
+  --tide-x: 15px;
+  --tide-phase: 0deg;
   transform-box: fill-box;
   transform-origin: center;
+  transform: translateX(calc(sin(var(--tide-phase)) * var(--tide-x)));
   will-change: transform;
-  animation: hero-wave-idle var(--tide-duration) calc(2.25s + var(--tide-delay)) ease-in-out infinite;
+  animation: hero-wave-idle var(--tide-duration) calc(2.25s + var(--tide-delay)) linear infinite;
 }
 .hero-symbol-vector .hero-wave-path {
   animation: hero-wave-path-in 1.05s var(--wave-delay) cubic-bezier(.16,.78,.2,1) both;
 }
-.hero-symbol-vector .hero-wave-idle-6 { --wave-delay: 0.46s; --wave-start: -58%; --wave-over: 2.5%; --tide-duration: 5.4s; --tide-x: 5.5px; --tide-y: 1.3px; }
-.hero-symbol-vector .hero-wave-idle-8 { --wave-delay: 0.52s; --wave-start: 58%; --wave-over: -2.5%; --tide-duration: 5.9s; --tide-delay: 0.18s; --tide-x: -5.5px; --tide-y: -1.2px; }
-.hero-symbol-vector .hero-wave-idle-1 { --wave-delay: 0.6s; --wave-start: -52%; --wave-over: 2%; --tide-duration: 6.4s; --tide-delay: 0.32s; --tide-x: 4.8px; --tide-y: -1.3px; }
-.hero-symbol-vector .hero-wave-idle-4 { --wave-delay: 0.7s; --wave-start: 52%; --wave-over: -2%; --tide-duration: 5.6s; --tide-delay: 0.5s; --tide-x: -4.6px; --tide-y: 1.5px; }
-.hero-symbol-vector .hero-wave-idle-10 { --wave-delay: 0.78s; --wave-start: -50%; --wave-over: 1.8%; --tide-duration: 7.1s; --tide-delay: 0.12s; --tide-x: 4.2px; --tide-y: -1.5px; }
-.hero-symbol-vector .hero-wave-idle-5 { --wave-delay: 0.86s; --wave-start: 50%; --wave-over: -1.8%; --tide-duration: 6.2s; --tide-delay: 0.42s; --tide-x: -4.4px; --tide-y: 1.6px; }
-.hero-symbol-vector .hero-wave-idle-11 { --wave-delay: 0.94s; --wave-start: -46%; --wave-over: 1.5%; --tide-duration: 5.1s; --tide-delay: 0.65s; --tide-x: 4.8px; --tide-y: -1.2px; }
-.hero-symbol-vector .hero-wave-idle-7 { --wave-delay: 1.02s; --wave-start: 46%; --wave-over: -1.5%; --tide-duration: 6.8s; --tide-delay: 0.28s; --tide-x: -4.1px; --tide-y: 1.5px; }
-.hero-symbol-vector .hero-wave-idle-9 { --wave-delay: 1.1s; --wave-start: -42%; --wave-over: 1.2%; --tide-duration: 7.4s; --tide-delay: 0.54s; --tide-x: 3.8px; --tide-y: -1.2px; }
+.hero-symbol-vector .hero-wave-idle-6 { --wave-delay: 0.46s; --wave-start: -58%; --wave-over: 2.5%; --tide-duration: 5.4s; --tide-x: 18px; }
+.hero-symbol-vector .hero-wave-idle-8 { --wave-delay: 0.52s; --wave-start: 58%; --wave-over: -2.5%; --tide-duration: 5.9s; --tide-delay: 0.18s; --tide-x: -18px; }
+.hero-symbol-vector .hero-wave-idle-1 { --wave-delay: 0.6s; --wave-start: -52%; --wave-over: 2%; --tide-duration: 6.4s; --tide-delay: 0.32s; --tide-x: 17px; }
+.hero-symbol-vector .hero-wave-idle-4 { --wave-delay: 0.7s; --wave-start: 52%; --wave-over: -2%; --tide-duration: 5.6s; --tide-delay: 0.5s; --tide-x: -17px; }
+.hero-symbol-vector .hero-wave-idle-10 { --wave-delay: 0.78s; --wave-start: -50%; --wave-over: 1.8%; --tide-duration: 7.1s; --tide-delay: 0.12s; --tide-x: 13px; }
+.hero-symbol-vector .hero-wave-idle-5 { --wave-delay: 0.86s; --wave-start: 50%; --wave-over: -1.8%; --tide-duration: 6.2s; --tide-delay: 0.42s; --tide-x: -13px; }
+.hero-symbol-vector .hero-wave-idle-11 { --wave-delay: 0.94s; --wave-start: -46%; --wave-over: 1.5%; --tide-duration: 5.1s; --tide-delay: 0.65s; --tide-x: 15px; }
+.hero-symbol-vector .hero-wave-idle-7 { --wave-delay: 1.02s; --wave-start: 46%; --wave-over: -1.5%; --tide-duration: 6.8s; --tide-delay: 0.28s; --tide-x: -15px; }
+.hero-symbol-vector .hero-wave-idle-9 { --wave-delay: 1.1s; --wave-start: -42%; --wave-over: 1.2%; --tide-duration: 7.4s; --tide-delay: 0.54s; --tide-x: 12px; }
 .hero-wordmark {
   position: relative;
   width: 100%;
@@ -389,11 +394,7 @@ footer :focus-visible {
   to { opacity: 1; transform: none; }
 }
 @keyframes hero-wave-idle {
-  0%, 50%, 100% { transform: none; }
-  25% { transform: translate(var(--tide-x), var(--tide-y)) scaleX(var(--tide-scale)); }
-  75% {
-    transform: translate(calc(0px - var(--tide-x)), calc(0px - var(--tide-y))) scaleX(calc(2 - var(--tide-scale)));
-  }
+  to { --tide-phase: 360deg; }
 }
 @keyframes hero-sail-path-in {
   from { opacity: 0; clip-path: inset(100% 0 0); transform: translateY(8%) scaleY(0.35); }
