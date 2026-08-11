@@ -69,19 +69,16 @@ const projects: Project[] = [
   },
 ];
 
-const letters = [
-  { char: "A", x: "-36vw", y: "-26vh", r: "-18deg" },
-  { char: "N", x: "-24vw", y: "28vh", r: "12deg" },
-  { char: "T", x: "-11vw", y: "-34vh", r: "-8deg" },
-  { char: "A", x: "5vw", y: "31vh", r: "17deg" },
-  { char: "R", x: "17vw", y: "-31vh", r: "9deg" },
-  { char: "A", x: "29vw", y: "23vh", r: "-14deg" },
-  { char: "L", x: "39vw", y: "-19vh", r: "11deg" },
+const wordmarkPieces = [
+  { x: "-36vw", y: "-25vh", r: "-15deg" },
+  { x: "-24vw", y: "27vh", r: "11deg" },
+  { x: "-11vw", y: "-33vh", r: "-8deg" },
+  { x: "5vw", y: "30vh", r: "15deg" },
+  { x: "17vw", y: "-30vh", r: "8deg" },
+  { x: "29vw", y: "22vh", r: "-13deg" },
+  { x: "39vw", y: "-18vh", r: "10deg" },
 ];
 
-// Polaroid pockets: each is released from a letter's home position (ox/oy) and
-// settles at a scattered spot (x/y) around the centre line as the wordmark splits.
-// Ordered small-and-far to big-and-near, so the composition builds as you scroll.
 const pockets = [
   { pick: 1, ox: "-11vw", oy: "-3vh", x: "-13vw", y: "-31vh", r: "7deg", w: "9.5vw", o: "0.7", float: "8.1s" },
   { pick: 5, ox: "-33vw", oy: "2vh", x: "-38vw", y: "10vh", r: "-5deg", w: "8vw", o: "0.5", float: "11s" },
@@ -105,28 +102,26 @@ const srcSetFor = (image: string, widths: number[], quality = 74) =>
 const categories = ["All", "Residential", "Interiors", "Commercial"] as const;
 
 export default function Home() {
-  const identityRef = useRef<HTMLElement>(null);
+  const brandRef = useRef<HTMLElement>(null);
   const headerRef = useRef<HTMLElement>(null);
   const [activeProject, setActiveProject] = useState(0);
   const [filter, setFilter] = useState<string>("All");
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
-    const identity = identityRef.current;
-    if (!identity) return;
+    const brandStory = brandRef.current;
+    if (!brandStory) return;
     let frame = 0;
     let ticking = false;
     const update = () => {
-      // Guard rather than cancel-and-reschedule: Safari's momentum scroll can
-      // outpace rAF, and repeated cancelling would starve the callback.
       if (ticking) return;
       ticking = true;
       frame = requestAnimationFrame(() => {
         ticking = false;
-        const rect = identity.getBoundingClientRect();
-        const distance = identity.offsetHeight - window.innerHeight;
+        const rect = brandStory.getBoundingClientRect();
+        const distance = brandStory.offsetHeight - window.innerHeight;
         const progress = Math.min(1, Math.max(0, -rect.top / Math.max(1, distance)));
-        identity.style.setProperty("--story-progress", progress.toFixed(3));
+        brandStory.style.setProperty("--story-progress", progress.toFixed(3));
       });
     };
     update();
@@ -174,7 +169,8 @@ export default function Home() {
 
       <header className="topbar" ref={headerRef}>
         <a href="#top" className="compact-logo" aria-label="Antaral Studio home">
-          <span>ANTARAL</span><small>Architecture / Studio</small>
+          <img src="/Antaral.svg" alt="" />
+          <small>Architecture + Design</small>
         </a>
         <nav id="primary-nav" className={menuOpen ? "nav-open" : ""} aria-label="Primary">
           <a href="#projects" onClick={() => setMenuOpen(false)}>Projects</a>
@@ -188,40 +184,44 @@ export default function Home() {
       </header>
 
       <main>
-        <section className="identity-story" id="top" ref={identityRef}>
-          {/* The wordmark below is a decorative treatment; this carries the name to
-              assistive tech and gives the document a descriptive top-level heading. */}
+        <section className="brand-hero" id="top" ref={brandRef}>
           <h1 className="sr-only">
             Antaral Studio — architecture and interior design by Ar. Monish Machhi, Gujarat, India
           </h1>
-          <div className="identity-stage">
-            <div className="wordmark-system" aria-hidden="true">
-              <div className="wordmark-frame">
-                <div className="wordmark-meta wordmark-meta-top">
-                  <span>22.3072° N / 73.1812° E</span>
-                  <span>Identity</span>
-                </div>
-                <div className="wordmark">
-                  {letters.map((letter, index) => (
-                    <span
-                      className={`word-letter letter-${index + 1}`}
-                      key={`${letter.char}-${index}`}
-                      style={{ "--letter-x": letter.x, "--letter-y": letter.y, "--letter-r": letter.r } as CSSProperties}
-                    >
-                      <span className="letter-face letter-outline">{letter.char}</span>
-                      <span className="letter-face letter-upper">{letter.char}</span>
-                      <span className="letter-face letter-interval">{letter.char}</span>
-                      <span className="letter-face letter-lower">{letter.char}</span>
-                    </span>
-                  ))}
-                </div>
-                <div className="wordmark-meta wordmark-meta-bottom">
-                  <span>Antaral / The space between</span>
-                  <span>Architecture + Interiors / Gujarat, India</span>
-                </div>
-              </div>
+
+          <div className="brand-stage">
+            <div className="hero-coordinate" aria-hidden="true">
+              <span>22.3072° N / 73.1812° E</span>
+              <span>Dahanu / Gujarat</span>
             </div>
-            <div className="stage-veil" aria-hidden="true" />
+
+            <div className="hero-brand" aria-hidden="true">
+              <div className="hero-symbol">
+                <svg className="hero-symbol-disc" viewBox="0 0 492 505" focusable="false">
+                  <circle cx="240" cy="257" r="221" />
+                </svg>
+                <span className="hero-logo-layer hero-sail-left"><img src="/LOGO.svg" alt="" /></span>
+                <span className="hero-logo-layer hero-sail-right"><img src="/LOGO.svg" alt="" /></span>
+                <span className="hero-logo-layer hero-waves-left"><img src="/LOGO.svg" alt="" /></span>
+                <span className="hero-logo-layer hero-waves-right"><img src="/LOGO.svg" alt="" /></span>
+                <img className="hero-logo-final" src="/LOGO.svg" alt="" />
+              </div>
+
+              <div className="hero-wordmark">
+                {wordmarkPieces.map((piece, index) => (
+                  <span
+                    className={`hero-wordmark-piece hero-wordmark-piece-${index + 1}`}
+                    key={`wordmark-piece-${index}`}
+                    style={{ "--letter-x": piece.x, "--letter-y": piece.y, "--letter-r": piece.r } as CSSProperties}
+                  >
+                    <img src="/Antaral.svg" alt="" />
+                  </span>
+                ))}
+              </div>
+              <div className="hero-studio"><i /><span>Studio</span><i /></div>
+              <p>Architecture + Design</p>
+            </div>
+
             <div className="pocket-field" aria-hidden="true">
               {pockets.map((pocket, index) => (
                 <div
@@ -248,8 +248,17 @@ export default function Home() {
                 </div>
               ))}
             </div>
+
             <p className="story-line" aria-hidden="true"><i /><span>Space shaped around life.</span><i /></p>
-            <div className="scroll-cue" aria-hidden="true"><span>Scroll to enter</span><i /></div>
+
+            <div className="hero-statement">
+              <p>We shape meaningful spaces between architecture, nature, people and place.</p>
+              <a href="#projects">Explore selected work <span aria-hidden="true">↓</span></a>
+            </div>
+
+            <p className="hero-meaning">Antaral <span>/</span> The space in between</p>
+            <div className="hero-horizon" aria-hidden="true"><i /><span /><i /></div>
+            <div className="stage-veil" aria-hidden="true" />
           </div>
         </section>
 
