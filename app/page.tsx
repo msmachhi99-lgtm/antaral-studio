@@ -69,16 +69,6 @@ const projects: Project[] = [
   },
 ];
 
-const wordmarkPieces = [
-  { x: "-36vw", y: "-25vh", r: "-15deg" },
-  { x: "-24vw", y: "27vh", r: "11deg" },
-  { x: "-11vw", y: "-33vh", r: "-8deg" },
-  { x: "5vw", y: "30vh", r: "15deg" },
-  { x: "17vw", y: "-30vh", r: "8deg" },
-  { x: "29vw", y: "22vh", r: "-13deg" },
-  { x: "39vw", y: "-18vh", r: "10deg" },
-];
-
 const pockets = [
   { pick: 1, ox: "-11vw", oy: "-3vh", x: "-13vw", y: "-31vh", r: "7deg", w: "9.5vw", o: "0.7", float: "8.1s" },
   { pick: 5, ox: "-33vw", oy: "2vh", x: "-38vw", y: "10vh", r: "-5deg", w: "8vw", o: "0.5", float: "11s" },
@@ -101,12 +91,54 @@ const srcSetFor = (image: string, widths: number[], quality = 74) =>
 
 const categories = ["All", "Residential", "Interiors", "Commercial"] as const;
 
+const prepareAnimatedSymbol = (source: string) => {
+  const document = new DOMParser().parseFromString(source, "image/svg+xml");
+  const svg = document.documentElement;
+  const paths = Array.from(svg.children).filter((node) => node.tagName.toLowerCase() === "path");
+
+  paths.forEach((path, index) => {
+    const sourceIndex = index + 1;
+    if (sourceIndex === 2 || sourceIndex === 3) {
+      path.classList.add("hero-sail-path", `hero-sail-path-${sourceIndex}`);
+      return;
+    }
+
+    path.classList.add("hero-wave-path");
+    const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    group.setAttribute("class", `hero-wave-idle hero-wave-idle-${sourceIndex}`);
+    path.parentNode?.insertBefore(group, path);
+    group.appendChild(path);
+  });
+
+  return new XMLSerializer().serializeToString(svg);
+};
+
 export default function Home() {
   const brandRef = useRef<HTMLElement>(null);
   const headerRef = useRef<HTMLElement>(null);
   const [activeProject, setActiveProject] = useState(0);
   const [filter, setFilter] = useState<string>("All");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [brandVectors, setBrandVectors] = useState<{ symbol: string; wordmark: string } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([
+      fetch("/LOGOBIGCirlce02.svg").then((response) => {
+        if (!response.ok) throw new Error("Unable to load the Antaral symbol");
+        return response.text();
+      }),
+      fetch("/Antaral.svg").then((response) => {
+        if (!response.ok) throw new Error("Unable to load the Antaral wordmark");
+        return response.text();
+      }),
+    ]).then(([symbol, wordmark]) => {
+      if (!cancelled) setBrandVectors({ symbol: prepareAnimatedSymbol(symbol), wordmark });
+    }).catch(() => {
+      // The static-image fallbacks remain visible if either local SVG fails.
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     const brandStory = brandRef.current;
@@ -169,7 +201,7 @@ export default function Home() {
 
       <header className="topbar" ref={headerRef}>
         <a href="#top" className="compact-logo" aria-label="Antaral Studio home">
-          <img src="/Antaral.svg" alt="" />
+          <span className="compact-logo-mark" aria-hidden="true" />
           <small>Architecture + Design</small>
         </a>
         <nav id="primary-nav" className={menuOpen ? "nav-open" : ""} aria-label="Primary">
@@ -197,26 +229,19 @@ export default function Home() {
 
             <div className="hero-brand" aria-hidden="true">
               <div className="hero-symbol">
-                <svg className="hero-symbol-disc" viewBox="0 0 492 505" focusable="false">
-                  <circle cx="240" cy="257" r="221" />
-                </svg>
-                <span className="hero-logo-layer hero-sail-left"><img src="/LOGO.svg" alt="" /></span>
-                <span className="hero-logo-layer hero-sail-right"><img src="/LOGO.svg" alt="" /></span>
-                <span className="hero-logo-layer hero-waves-left"><img src="/LOGO.svg" alt="" /></span>
-                <span className="hero-logo-layer hero-waves-right"><img src="/LOGO.svg" alt="" /></span>
-                <img className="hero-logo-final" src="/LOGO.svg" alt="" />
+                {brandVectors ? (
+                  <div className="hero-symbol-vector" dangerouslySetInnerHTML={{ __html: brandVectors.symbol }} />
+                ) : (
+                  <img className="hero-vector-fallback" src="/LOGOBIGCirlce02.svg" alt="" />
+                )}
               </div>
 
               <div className="hero-wordmark">
-                {wordmarkPieces.map((piece, index) => (
-                  <span
-                    className={`hero-wordmark-piece hero-wordmark-piece-${index + 1}`}
-                    key={`wordmark-piece-${index}`}
-                    style={{ "--letter-x": piece.x, "--letter-y": piece.y, "--letter-r": piece.r } as CSSProperties}
-                  >
-                    <img src="/Antaral.svg" alt="" />
-                  </span>
-                ))}
+                {brandVectors ? (
+                  <div className="hero-wordmark-vector" dangerouslySetInnerHTML={{ __html: brandVectors.wordmark }} />
+                ) : (
+                  <img className="hero-vector-fallback" src="/Antaral.svg" alt="" />
+                )}
               </div>
               <div className="hero-studio"><i /><span>Studio</span><i /></div>
               <p>Architecture + Design</p>
