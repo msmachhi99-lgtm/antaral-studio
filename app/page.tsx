@@ -69,16 +69,15 @@ const projects: Project[] = [
   },
 ];
 
+// One pocket per project, so no photograph is ever on screen twice. They rise
+// out of the mark's centre and settle clear of the opening wordmark.
 const pockets = [
-  { pick: 1, ox: "-11vw", oy: "-3vh", x: "-13vw", y: "-31vh", r: "7deg", w: "9.5vw", o: "0.7", float: "8.1s" },
-  { pick: 5, ox: "-33vw", oy: "2vh", x: "-38vw", y: "10vh", r: "-5deg", w: "8vw", o: "0.5", float: "11s" },
-  { pick: 3, ox: "33vw", oy: "3vh", x: "37vw", y: "26vh", r: "6deg", w: "8.5vw", o: "0.5", float: "9.4s" },
-  { pick: 1, ox: "22vw", oy: "-2vh", x: "33vw", y: "-14vh", r: "10deg", w: "9vw", o: "0.55", float: "10.2s" },
-  { pick: 5, ox: "11vw", oy: "3vh", x: "19vw", y: "20vh", r: "-6deg", w: "11vw", o: "0.9", float: "7.9s" },
-  { pick: 3, ox: "-22vw", oy: "3vh", x: "-25vw", y: "14vh", r: "9deg", w: "11.5vw", o: "0.95", float: "9.2s" },
-  { pick: 2, ox: "0vw", oy: "-2vh", x: "7vw", y: "-25vh", r: "4deg", w: "12.5vw", o: "1", float: "8.8s" },
-  { pick: 0, ox: "-33vw", oy: "-2vh", x: "-34vw", y: "-22vh", r: "-11deg", w: "13vw", o: "1", float: "7.5s" },
-  { pick: 4, ox: "0vw", oy: "2vh", x: "-7vw", y: "26vh", r: "-8deg", w: "13.5vw", o: "1", float: "10.4s" },
+  { pick: 0, ox: "-8vw", oy: "-2vh", x: "-34vw", y: "-20vh", r: "-9deg", w: "12vw", o: "1", float: "8.4s" },
+  { pick: 5, ox: "6vw", oy: "-3vh", x: "12vw", y: "-29vh", r: "10deg", w: "12.5vw", o: "0.95", float: "9.1s" },
+  { pick: 2, ox: "-10vw", oy: "2vh", x: "-27vw", y: "18vh", r: "6deg", w: "13vw", o: "1", float: "7.8s" },
+  { pick: 1, ox: "8vw", oy: "-2vh", x: "31vw", y: "-24vh", r: "7deg", w: "11vw", o: "0.9", float: "9.6s" },
+  { pick: 4, ox: "0vw", oy: "3vh", x: "-9vw", y: "27vh", r: "-7deg", w: "13.5vw", o: "1", float: "8.9s" },
+  { pick: 3, ox: "10vw", oy: "2vh", x: "35vw", y: "14vh", r: "-5deg", w: "10.5vw", o: "0.85", float: "10.2s" },
 ];
 
 // The source URLs carry Unsplash's own resize params, so ask for the width each
@@ -94,7 +93,15 @@ const categories = ["All", "Residential", "Interiors", "Commercial"] as const;
 const prepareAnimatedSymbol = (source: string) => {
   const document = new DOMParser().parseFromString(source, "image/svg+xml");
   const svg = document.documentElement;
+  const wrapInGroup = (node: Element, className: string) => {
+    const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    group.setAttribute("class", className);
+    node.parentNode?.insertBefore(group, node);
+    group.appendChild(node);
+  };
+
   const paths = Array.from(svg.children).filter((node) => node.tagName.toLowerCase() === "path");
+  const disc = svg.querySelector("circle");
 
   paths.forEach((path, index) => {
     const sourceIndex = index + 1;
@@ -104,11 +111,12 @@ const prepareAnimatedSymbol = (source: string) => {
     }
 
     path.classList.add("hero-wave-path");
-    const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
-    group.setAttribute("class", `hero-wave-idle hero-wave-idle-${sourceIndex}`);
-    path.parentNode?.insertBefore(group, path);
-    group.appendChild(path);
+    wrapInGroup(path, `hero-wave-idle hero-wave-idle-${sourceIndex}`);
   });
+
+  // The disc carries its own intro animation, so the scroll-driven sunset needs
+  // a separate transform layer or the animation's fill state would override it.
+  if (disc) wrapInGroup(disc, "hero-disc");
 
   return new XMLSerializer().serializeToString(svg);
 };
@@ -123,12 +131,16 @@ export default function Home() {
 
   useEffect(() => {
     let cancelled = false;
+    // Document-relative, not root-absolute. The GitHub Pages build is served
+    // from /antaral-studio/, where "/Antaral.svg" 404s and the whole animated
+    // mark silently falls back to nothing. Vite rewrites public paths in CSS
+    // for the base but not string literals in JS, so these must stay relative.
     Promise.all([
-      fetch("/LOGOBIGCirlce02.svg").then((response) => {
+      fetch("LOGOBIGCirlce02.svg").then((response) => {
         if (!response.ok) throw new Error("Unable to load the Antaral symbol");
         return response.text();
       }),
-      fetch("/Antaral.svg").then((response) => {
+      fetch("Antaral.svg").then((response) => {
         if (!response.ok) throw new Error("Unable to load the Antaral wordmark");
         return response.text();
       }),
@@ -223,7 +235,6 @@ export default function Home() {
 
           <div className="brand-stage">
             <div className="hero-coordinate" aria-hidden="true">
-              <span>22.3072° N / 73.1812° E</span>
               <span>Dahanu / Gujarat</span>
             </div>
 
@@ -232,7 +243,7 @@ export default function Home() {
                 {brandVectors ? (
                   <div className="hero-symbol-vector" dangerouslySetInnerHTML={{ __html: brandVectors.symbol }} />
                 ) : (
-                  <img className="hero-vector-fallback" src="/LOGOBIGCirlce02.svg" alt="" />
+                  <img className="hero-vector-fallback" src="LOGOBIGCirlce02.svg" alt="" />
                 )}
               </div>
 
@@ -240,11 +251,10 @@ export default function Home() {
                 {brandVectors ? (
                   <div className="hero-wordmark-vector" dangerouslySetInnerHTML={{ __html: brandVectors.wordmark }} />
                 ) : (
-                  <img className="hero-vector-fallback" src="/Antaral.svg" alt="" />
+                  <img className="hero-vector-fallback" src="Antaral.svg" alt="" />
                 )}
               </div>
               <div className="hero-studio"><i /><span>Studio</span><i /></div>
-              <p>Architecture + Design</p>
             </div>
 
             <div className="pocket-field" aria-hidden="true">
@@ -267,7 +277,6 @@ export default function Home() {
                   <div className="pocket-drift">
                     <figure className="pocket-card">
                       <img src={srcFor(projects[pocket.pick].image, 500, 72)} alt="" decoding="async" />
-                      <figcaption>{projects[pocket.pick].id} — {projects[pocket.pick].title}</figcaption>
                     </figure>
                   </div>
                 </div>
@@ -277,7 +286,6 @@ export default function Home() {
             <p className="story-line" aria-hidden="true"><i /><span>Space shaped around life.</span><i /></p>
 
             <div className="hero-statement">
-              <p>We shape meaningful spaces between architecture, nature, people and place.</p>
               <a href="#projects">Explore selected work <span aria-hidden="true">↓</span></a>
             </div>
 
